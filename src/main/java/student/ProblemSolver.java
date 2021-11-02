@@ -56,37 +56,95 @@ public class ProblemSolver implements IProblem {
 
 	@Override 
 	public <T> T lca(Graph<T> g, T root, T u, T v) {
+		PathFinder<T> pathFinder = new PathFinder<>(g);
 
-		DFS<T> dfs = new DFS<>(g);
-
-		List <T> pathToU = dfs.findWholePath(g,u); //henter liste med sti til u fra bfs O(N)
-		List <T> pathToV = dfs.findWholePath(g,v);//henter liste med sti til v fra bfs O(N)
-
+		List <T> pathToU = pathFinder.findPath(g,u); //henter liste med sti til u fra bfs O(N)
+		List <T> pathToV = pathFinder.findPath(g,v);//henter liste med sti til v fra bfs O(N)
 		Collections.reverse(pathToU); //for å starte ved roten  O(N)
 		Collections.reverse(pathToV); //for å starte ved roten  O(N)
 
 		int lengthU = pathToU.size();
 		int lengthV = pathToV.size();
 
-		int index = 0; //counter som teller antall like noder i begge listene
-		if(lengthU == 1 || lengthV == 1){
-			return pathToU.get(index);
+		int counter = 0; //counter som teller antall like noder i begge listene
+		if(lengthU == 1){
+			return pathToU.get(counter);
 		}
+		if (lengthV == 1){
+			return pathToU.get(counter);
+		}
+
 		try {
-			while (pathToU.get(index).equals(pathToV.get(index))) { //O(N), worst case
-				index++;
+			while (pathToU.get(counter).equals(pathToV.get(counter))) { //O(N), worst case
+				counter += 1;
 			}
-		} catch(IndexOutOfBoundsException e){}
+		} catch(IndexOutOfBoundsException ignored){}
 
-
-		return pathToU.get(index-1);
+		return pathToU.get(counter-1);
 	}
 
 
 	@Override
 	public <T> Edge<T> addRedundant(Graph<T> g, T root) {
-		// Task 3
-		// TODO implement method
-		return null;
+		HashMap<T,Integer> count = new HashMap<>();
+		HashMap<T,ArrayList<T>> neighbours = new HashMap<>();
+
+		HashSet<T> marked = new HashSet<>();
+		HashSet<T> subTrees = new HashSet<>(); //inneholder to elementer. Største subtreene til roten
+
+		ArrayList<T> leaves = new ArrayList<>();
+
+		count(g, root, count, marked, neighbours); //O(N)
+
+		Comparator<T> compareSize = (o1, o2) -> count.get(o2) - count.get(o1);
+		PriorityQueue<T> pq = new PriorityQueue<>(compareSize);
+
+		for (T neighbor : g.neighbours(root)){ //O(N)
+			pq.add(neighbor);
+		}
+		subTrees.add(pq.poll()); //O(logN)
+
+		if (g.degree(root) > 1){ //O(logN)
+			subTrees.add(pq.poll());
+		} else {
+			leaves.add(root);
+		}
+
+		for (T rootNode : subTrees){ //O(1)
+			while (g.degree(rootNode) != 1){ //O(logN)
+				int i = 0;
+				T newNode = null;
+
+				for (T neighbor : neighbours.get(rootNode)){ //O(N)
+					if (count.get(neighbor) > i){
+						i = count.get(neighbor);
+						newNode = neighbor;
+					}
+				}
+				rootNode = newNode;
+			}
+			leaves.add(rootNode);
+		}
+
+		T leaf1 = leaves.remove(leaves.size()-1); //O(1)
+		T leaf2 = leaves.get(leaves.size()-1); //O(1)
+
+		return new Edge<>(leaf1,leaf2);
+	}
+
+	//O(N)
+	public <T> int count(Graph<T> tree, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
+		int counter = 1;
+		marked.add(node); //O(1)
+		ArrayList<T> childrenList = new ArrayList<>();
+		for(T children : tree.neighbours(node)){ //O(N)
+			if(!marked.contains(children)){ //O(1)
+				childrenList.add(children); //O(1)
+				counter += count(tree, children, count, marked, neighbours);
+			}
+		}
+		neighbours.put(node, childrenList); //O(1)
+		count.put(node, counter); //O(1)
+		return counter;
 	}
 }

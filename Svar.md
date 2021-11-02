@@ -18,9 +18,18 @@ For each method of the different strategies give a runtime analysis in Big-O not
 **If you have implemented any helper methods you must add these as well.**
 
 * ``mst(WeightedGraph<T, E> g)``: O(?)
-    * *Insert description of why the method has the given runtime*
+
+
+
+
+
+
+
 * ``lca(Graph<T> g, T root, T u, T v)``: O(?)
-    * *Insert description of why the method has the given runtime*
+
+
+
+    
 * ``addRedundant(Graph<T> g, T root)``: O(?)
-    * *Insert description of why the method has the given runtime*
+   
 
