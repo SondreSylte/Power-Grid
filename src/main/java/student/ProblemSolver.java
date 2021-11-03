@@ -6,42 +6,49 @@ import graph.*;
 
 public class ProblemSolver implements IProblem {
 
+	/**
+	 * Siden dette er et MST, kan vi anta at n > m
+	 * @param g - The graph of possible power connections the power company can build
+	 * @param <T>
+	 * @param <E>
+	 * @return en liste med de korteste kantene å gå.
+	 */
 	@Override
-	public <T, E extends Comparable<E>> ArrayList<Edge<T>> mst(WeightedGraph<T, E> g) {
+	public <T, E extends Comparable<E>> ArrayList<Edge<T>> mst(WeightedGraph<T, E> g) { //O(n) + O(m log m) + O(n*m log m) = O(m log m)
 
-		ArrayList<Edge<T>> cheapestEdge = new ArrayList<>(g.numVertices());
+		ArrayList<Edge<T>> shortestEdge = new ArrayList<>(g.numVertices());
 		if (g.numVertices() < 1){
-			return cheapestEdge;
+			return shortestEdge;
 		}
 
 		HashSet<T> marked = new HashSet<>(g.numVertices());
 		PriorityQueue<Edge<T>> priEdges = new PriorityQueue<>(g);
 
-		T start = g.vertices().iterator().next();
-		for(Edge<T> e : g.adjacentEdges(start)){
-			priEdges.add(e);
+		T start = g.vertices().iterator().next(); //O(1)
+		for(Edge<T> e : g.adjacentEdges(start)){  //O(m) * O(log n) = O(m log n)
+			priEdges.add(e); //O(log n)
 		}
-		marked.add(start);
+		marked.add(start); //O(1)
 
-		while (!priEdges.isEmpty() && cheapestEdge.size()-1 < g.size()){
-			Edge<T> e = priEdges.remove();
+		while (!priEdges.isEmpty() && shortestEdge.size()-1 < g.size()){ //O(n) * O(m log m) = O(n*m log m)
+			Edge<T> e = priEdges.remove(); //O(log m)
 			T v = e.a;
 			T w = e.b;
-			assert marked.contains(v) || marked.contains(w);
+			assert marked.contains(v) || marked.contains(w); //O(1)
 
-			if (!marked.contains(v)){
-				marked.add(v);
-				cheapestEdge.add(e);
-				for (Edge<T> edge: g.adjacentEdges(v)){
-					if (!marked.contains(edge.other(v))){
-						priEdges.add(edge);
+			if (!marked.contains(v)){ //O(1)
+				marked.add(v); //(1)
+				shortestEdge.add(e); //O(1)
+				for (Edge<T> edge: g.adjacentEdges(v)){ //O(m) * O(log m) = O(m log m)
+					if (!marked.contains(edge.other(v))){ //O(1)
+						priEdges.add(edge); //O(log m)
 					}
 				}
 			}
 
 			if (!marked.contains(w)){
 				marked.add(w);
-				cheapestEdge.add(e);
+				shortestEdge.add(e);
 				for (Edge<T> edge: g.adjacentEdges(w)){
 					if (!marked.contains(edge.other(w))){
 						priEdges.add(edge);
@@ -49,43 +56,57 @@ public class ProblemSolver implements IProblem {
 				}
 			}
 		}
-		System.out.println(cheapestEdge);
-		return cheapestEdge;
+		System.out.println(shortestEdge);
+		return shortestEdge;
 	}
 
 
+
+
+
+	/**
+	 * @param g - The tree of power lines built by the power company.
+	 * @param root - The power station.
+	 * @param u - u and v are the two points with no power.
+	 * @param v - u and v are the two points with no power.
+	 * @param <T>
+	 * @return en node som er felles common ancestor for to gitte noder
+	 */
 	@Override 
 	public <T> T lca(Graph<T> g, T root, T u, T v) {
-		PathFinder<T> pathFinder = new PathFinder<>(g);
+		new BFS();
 
-		List <T> pathToU = pathFinder.findPath(g,u); //henter liste med sti til u fra bfs O(N)
-		List <T> pathToV = pathFinder.findPath(g,v);//henter liste med sti til v fra bfs O(N)
-		Collections.reverse(pathToU); //for å starte ved roten  O(N)
-		Collections.reverse(pathToV); //for å starte ved roten  O(N)
+		HashMap<T,T> childToParent = BFS.parents(g,root); //
+		ArrayList<T> pathToU = findPath(u,childToParent); //O(N)
+		ArrayList<T> pathToV = findPath(v,childToParent); //O(N)
 
-		int lengthU = pathToU.size();
-		int lengthV = pathToV.size();
-
-		int counter = 0; //counter som teller antall like noder i begge listene
-		if(lengthU == 1){
-			return pathToU.get(counter);
-		}
-		if (lengthV == 1){
-			return pathToU.get(counter);
-		}
-
-		try {
-			while (pathToU.get(counter).equals(pathToV.get(counter))) { //O(N), worst case
-				counter += 1;
+		HashSet<T> PathUSet = new HashSet<>(pathToU);
+		for (T node : pathToV){ //O(N)
+			if (PathUSet.contains(node)){ //O(1)
+				return node;
 			}
-		} catch(IndexOutOfBoundsException ignored){}
 
-		return pathToU.get(counter-1);
+		}
+		throw new IllegalArgumentException("No lca found");
 	}
 
+	private <T> ArrayList<T> findPath(T parent, HashMap<T,T> childToParent){
+		ArrayList<T> path = new ArrayList<>();
+		while (parent != null){ //O(N)
+			path.add(parent);
+			parent = childToParent.get(parent);
+		}
+		return path;
+	}
 
+	/**
+	 * @param g
+	 * @param root
+	 * @param <T>
+	 * @return en edge mellom to løv som skal connecte de to subtrærne.
+	 */
 	@Override
-	public <T> Edge<T> addRedundant(Graph<T> g, T root) {
+	public <T> Edge<T> addRedundant(Graph<T> g, T root) { //O(N) + O(log N) = O(N)
 		HashMap<T,Integer> count = new HashMap<>();
 		HashMap<T,ArrayList<T>> neighbours = new HashMap<>();
 
@@ -93,29 +114,33 @@ public class ProblemSolver implements IProblem {
 		HashSet<T> subTrees = new HashSet<>(); //inneholder to elementer. Største subtreene til roten
 
 		ArrayList<T> leaves = new ArrayList<>();
+		ArrayList<T> neighbors = new ArrayList<>();
 
-		count(g, root, count, marked, neighbours); //O(N)
+		countDepth(g, root, count, marked, neighbours); //O(N)
 
-		Comparator<T> compareSize = (o1, o2) -> count.get(o2) - count.get(o1);
-		PriorityQueue<T> pq = new PriorityQueue<>(compareSize);
+		Comparator<T> compareSize = Comparator.comparingInt(count::get); //O(1)
 
-		for (T neighbor : g.neighbours(root)){ //O(N)
-			pq.add(neighbor);
+		for (T neighbour : g.neighbours(root)){ //O(N)
+			neighbors.add(neighbour); //O(1)
 		}
-		subTrees.add(pq.poll()); //O(logN)
+		T biggest = Collections.max(neighbors,compareSize); //O(1)
+		subTrees.add(biggest); //O(1)
+		neighbors.remove(biggest); //O(1)
 
 		if (g.degree(root) > 1){ //O(logN)
-			subTrees.add(pq.poll());
+			subTrees.add(Collections.max(neighbors,compareSize));
 		} else {
-			leaves.add(root);
+			leaves.add(root); //O(1)
 		}
 
-		for (T rootNode : subTrees){ //O(1)
-			while (g.degree(rootNode) != 1){ //O(logN)
+		//Koden går alltid lenger og lenger ned i treet og aldri i samme node mer enn en gang.
+		//Derfor blir kjøretiden på foor-loopen under O(N).
+		for (T rootNode : subTrees){
+			while (g.degree(rootNode) != 1){
 				int i = 0;
 				T newNode = null;
 
-				for (T neighbor : neighbours.get(rootNode)){ //O(N)
+				for (T neighbor : neighbours.get(rootNode)){
 					if (count.get(neighbor) > i){
 						i = count.get(neighbor);
 						newNode = neighbor;
@@ -123,7 +148,7 @@ public class ProblemSolver implements IProblem {
 				}
 				rootNode = newNode;
 			}
-			leaves.add(rootNode);
+			leaves.add(rootNode); //O(1)
 		}
 
 		T leaf1 = leaves.remove(leaves.size()-1); //O(1)
@@ -133,14 +158,14 @@ public class ProblemSolver implements IProblem {
 	}
 
 	//O(N)
-	public <T> int count(Graph<T> tree, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
+	public <T> int countDepth(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
 		int counter = 1;
 		marked.add(node); //O(1)
 		ArrayList<T> childrenList = new ArrayList<>();
-		for(T children : tree.neighbours(node)){ //O(N)
+		for(T children : g.neighbours(node)){ //O(N)
 			if(!marked.contains(children)){ //O(1)
 				childrenList.add(children); //O(1)
-				counter += count(tree, children, count, marked, neighbours);
+				counter += countDepth(g, children, count, marked, neighbours);
 			}
 		}
 		neighbours.put(node, childrenList); //O(1)

@@ -79,7 +79,7 @@ public class Graph<V> implements IGraph<V> {
 	}
 
 	@Override
-	public Iterable<V> neighbours(V v) {
+	public Iterable<V> neighbours(V v) { //O(N)
 		return Collections.unmodifiableSet(getNeighbours(v));
 	}
 	
