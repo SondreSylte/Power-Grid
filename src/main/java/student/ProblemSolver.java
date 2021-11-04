@@ -20,7 +20,7 @@ public class ProblemSolver<T> implements IProblem {
 	 * @return en liste med de korteste kantene å gå.
 	 */
 	@Override
-	public <T, E extends Comparable<E>> ArrayList<Edge<T>> mst(WeightedGraph<T, E> g) { //O(n) + O(m log m) + O(n*m log m) = O(n*m log m)
+	public <T, E extends Comparable<E>> ArrayList<Edge<T>> mst(WeightedGraph<T, E> g) { //O(n) + O(m log m) + O(m log m) = O(m log m)
 
 		ArrayList<Edge<T>> shortestEdge = new ArrayList<>(g.numVertices());
 		if (g.numVertices() < 1){
@@ -36,14 +36,14 @@ public class ProblemSolver<T> implements IProblem {
 		}
 		marked.add(start); //O(1)
 
-		while (!priEdges.isEmpty() && shortestEdge.size()-1 < g.size()){ //O(n) * O(m log m) = O(n*m log m)
+		while (!priEdges.isEmpty() && shortestEdge.size()-1 < g.size()){ //O(m) * O(log m) = O(m log m)
 			Edge<T> e = priEdges.poll(); //O(log m)
 
 			if(marked.contains(e.a) && marked.contains(e.b) ) continue; //O(1)
 			shortestEdge.add(e); //O(1)
 
-			findNodeNotInMarked(g, e.a, marked, priEdges); //O(m log m)
-			findNodeNotInMarked(g, e.b, marked, priEdges); //O(m log m)
+			findNodeNotInMarked(g, e.a, marked, priEdges); //O(log m)
+			findNodeNotInMarked(g, e.b, marked, priEdges); //O(log m)
 		}
 		return shortestEdge;
 	}
@@ -59,11 +59,11 @@ public class ProblemSolver<T> implements IProblem {
 	 * @param <E>
 	 * @param <T>
 	 */
-	//O(m log m)
+	//O(degree) * O(log m) = O(log m)
 	private <E extends Comparable<E>,T> void findNodeNotInMarked(WeightedGraph<T, E> g, T node, HashSet<T> marked, PriorityQueue<Edge<T>> priEdges){
 		if (!marked.contains(node)){ //O(1)
 			marked.add(node); //O(1)
-			for (Edge<T> edge: g.adjacentEdges(node)) //O(m)
+			for (Edge<T> edge: g.adjacentEdges(node)) //O(degree) til edge
 					priEdges.add(edge); //O(log m)
 			}
 		}
@@ -106,7 +106,7 @@ public class ProblemSolver<T> implements IProblem {
 	 */
 	private <T> ArrayList<T> findPath(T parent, HashMap<T,T> childToParent){
 		ArrayList<T> path = new ArrayList<>();
-		while (parent != null){ //O(N)
+		while (parent != null){
 			path.add(parent);
 			parent = childToParent.get(parent);
 		}
@@ -128,27 +128,27 @@ public class ProblemSolver<T> implements IProblem {
 		HashSet<T> subTrees = new HashSet<>();
 
 		ArrayList<T> leaves = new ArrayList<>();
-		ArrayList<T> neighboursList = new ArrayList<>();
+		ArrayList<T> nodes = new ArrayList<>();
 
 		count(g, root, count, marked, neighbours);
 
 		Comparator<T> compareSize = Comparator.comparingInt(count::get);
 
 		for (T n : g.neighbours(root)){
-			neighboursList.add(n);
+			nodes.add(n);
 		}
-		T biggestSubTree = Collections.max(neighboursList,compareSize);
-		subTrees.add(biggestSubTree);
-		neighboursList.remove(biggestSubTree);
+		T nodeWithBiggestSubTree = Collections.max(nodes,compareSize);
+		subTrees.add(nodeWithBiggestSubTree);
+		nodes.remove(nodeWithBiggestSubTree);
 
 		if (g.degree(root) > 1){
-			subTrees.add(Collections.max(neighboursList,compareSize));
+			subTrees.add(Collections.max(nodes,compareSize));
 		} else {
 			leaves.add(root);
 		}
 
 		//Koden går alltid lenger og lenger ned i treet og aldri i samme node mer enn en gang.
-		//Derfor blir kjøretiden på foor-loopen under O(n).
+		//Derfor blir kjøretiden på for-loopen under O(n).
 		for (T rootNode : subTrees){
 			while (g.degree(rootNode) != 1){
 				int i = 0;
@@ -173,7 +173,7 @@ public class ProblemSolver<T> implements IProblem {
 	}
 
 	/**
-	 * Denne hjelpemetoden teller noder.
+	 * Denne hjelpemetoden teller nodens barn. Den vil legge til noden og antall barn i et hashmap.
 	 * @param g
 	 * @param node
 	 * @param count
@@ -185,14 +185,14 @@ public class ProblemSolver<T> implements IProblem {
 	public <T> int count(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
 		int counter = 1;
 		marked.add(node);
-		ArrayList<T> childrenList = new ArrayList<>();
+		ArrayList<T> n = new ArrayList<>();
 		for(T children : g.neighbours(node)){
 			if(!marked.contains(children)){
-				childrenList.add(children);
+				n.add(children);
 				counter += count(g, children, count, marked, neighbours);
 			}
 		}
-		neighbours.put(node, childrenList);
+		neighbours.put(node,n);
 		count.put(node, counter);
 		return counter;
 	}

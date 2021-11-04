@@ -12,7 +12,7 @@ velge den korteste. Legger så til startnoden i marked listen, som da vil si at 
 
 Vil så lage en loop som fortsetter til det er én mindre kant enn antall noder.
 I loopen vil jeg alltid ta vekk den korteste kanten i pq, og så sjekke om marked listen inneholder de to nodene til denne kanten.
-Om den gjør det, vil jeg adde den i shortest edge. 
+Om den gjør det, vil jeg adde den i shortest edge.
 
 ## Task 2 - lca
 
@@ -31,7 +31,17 @@ Skal i denne oppgaven finne et par med noder der det lønner seg mest å legge t
 løvene til de to største subtrærne. Derfor vil jeg i koden finne de to største subtrærne og det nederste løvet i hver av disse. Så vil jeg
 lage en edge mellom. For å telle noder bruker jeg en hjelpemetode som heter count. 
 
+I metoden ønsker jeg å følge de to største subtrærne nedover treet til jeg finner den noden som har størst totalt antall barn. Jeg kommer til løvene når jeg finner 
+en node som ikke har noen barn. Denne noden blir det ene løvet jeg skal returnere. 
+
+Metoden er rekursiv. Den bruker hjelpefunksjonen count inni metoden. Rekursjonen returnerer en int som representerer antall barn noden har.
+Når denne kalles, blir nodens barn og antall barn lagt inn i et hashmap.
+
 I compareSize vil jeg sortere subtrærne til roten. Ved å bruke Collections.max kan jeg forbedre kjøretiden fra O(n) ved bruk av PQ til O(1).
+I denne comparatoren finner vi hvilken to subtrær jeg ønsker å traversere gjennom.
+
+I linje 150: Koden går alltid lenger og lenger ned i treet og aldri i samme node mer enn en gang. Derfor blir kjøretiden på for-loopen under O(n).
+
 
 
 # Runtime Analysis
@@ -39,53 +49,72 @@ For each method of the different strategies give a runtime analysis in Big-O not
 
 **If you have implemented any helper methods you must add these as well.**
 
-* ``mst(WeightedGraph<T, E> g)``: O(N) + O(M logM) + O(N*M log M)
+* ``mst(WeightedGraph<T, E> g)``: //O(n) + O(m log m) + O(m log m) = O(m log m)
 
-  public <T, E extends Comparable<E>> ArrayList<Edge<T>> mst(WeightedGraph<T, E> g) { 
 
-      ArrayList<Edge<T>> cheapestEdge = new ArrayList<>(g.numVertices());
-      if (g.numVertices() < 1){
-          return cheapestEdge;
-      }
+	/**
+	 * mst metoden kommer i alle steg til å velge den korteste kanten for å komme fra en node til en annen.
+	 * Har en liste som alltid holder de korteste kantene.
+	 * Har en priority queue som prioriterer hvem av kantene til noden som er kortest
+	 * Marked listed "markerer" noder som er funnet
+	 *
+	 * @param g - The graph of possible power connections the power company can build
+	 * @param <T>
+	 * @param <E>
+	 * @return en liste med de korteste kantene å gå.
+	 */
+	@Override
+	public <T, E extends Comparable<E>> ArrayList<Edge<T>> mst(WeightedGraph<T, E> g) { 
 
-      HashSet<T> marked = new HashSet<>(g.numVertices());
-      PriorityQueue<Edge<T>> priEdges = new PriorityQueue<>(g);
+		ArrayList<Edge<T>> shortestEdge = new ArrayList<>(g.numVertices());
+		if (g.numVertices() < 1){
+			return shortestEdge;
+		}
 
-      T start = g.vertices().iterator().next(); //O(N)
-      for(Edge<T> e : g.adjacentEdges(start)){  //O(M) * O(log M) = O(M logM)
-          priEdges.add(e); //O(log M)
-      }
-      marked.add(start); //O(1)
+		HashSet<T> marked = new HashSet<>(g.numVertices());
+		PriorityQueue<Edge<T>> priEdges = new PriorityQueue<>(g);
 
-      while (!priEdges.isEmpty() && cheapestEdge.size()-1 < g.size()){ //O(N) * O(M logM) = O(N*M log M)
-          Edge<T> e = priEdges.remove(); //O(log N)
-          T v = e.a;
-          T w = e.b;
-          assert marked.contains(v) || marked.contains(w); //O(1)
+		T start = g.vertices().iterator().next(); //O(1)
+		for(Edge<T> e : g.adjacentEdges(start)){  //O(m) * O(log n) = O(m log n)
+			priEdges.add(e); //O(log n)
+		}
+		marked.add(start); //O(1)
 
-          if (!marked.contains(v)){ //O(1)
-              marked.add(v); //(1)
-              cheapestEdge.add(e); //O(1)
-              for (Edge<T> edge: g.adjacentEdges(v)){ //O(M) * O(log M) = O(M logM)
-                  if (!marked.contains(edge.other(v))){ //O(1)
-                      priEdges.add(edge); //O(log M)
-                  }
-              }
-          }
+		while (!priEdges.isEmpty() && shortestEdge.size()-1 < g.size()){ //O(m) * O(log m) = O(m log m)
+			Edge<T> e = priEdges.poll(); //O(log m)
 
-          if (!marked.contains(w)){
-              marked.add(w);
-              cheapestEdge.add(e);
-              for (Edge<T> edge: g.adjacentEdges(w)){
-                  if (!marked.contains(edge.other(w))){
-                      priEdges.add(edge);
-                  }
-              }
-          }
-      }
-      System.out.println(cheapestEdge);
-      return cheapestEdge;
-  }
+			if(marked.contains(e.a) && marked.contains(e.b) ) continue; //O(1)
+			shortestEdge.add(e); //O(1)
+
+			findNodeNotInMarked(g, e.a, marked, priEdges); //O(log m)
+			findNodeNotInMarked(g, e.b, marked, priEdges); //O(log m)
+		}
+		return shortestEdge;
+	}
+
+
+``findNodeNotinMarked()`` O(degree) * O(log m) = O(log m)
+	/**
+	 * Marked vil holde styr på hvilken av nodene som er besøkt og ikke. Denne metoden vil sjekke om noden er
+	 * besøkt. Om den ikke er det, kan den legge til noden sine kanter i pq.
+	 * Markerer videre noden som besøkt.
+	 * @param g
+	 * @param node
+	 * @param marked - listen med de markerte nodene.
+	 * @param priEdges - vil addere kantene i denne listen
+	 * @param <E>
+	 * @param <T>
+	 */
+	
+	private <E extends Comparable<E>,T> void findNodeNotInMarked(WeightedGraph<T, E> g, T node, HashSet<T> marked, PriorityQueue<Edge<T>> priEdges){
+		if (!marked.contains(node)){ //O(1)
+			marked.add(node); //O(1)
+			for (Edge<T> edge: g.adjacentEdges(node)) //O(degree) til edge
+					priEdges.add(edge); //O(log m)
+			}
+		}
+
+
 
 
 * ``lca(Graph<T> g, T root, T u, T v)``: O(n) + O(n) + O(n) + O(n) = O(n)
@@ -118,9 +147,25 @@ For each method of the different strategies give a runtime analysis in Big-O not
     throw new IllegalArgumentException("No lca found");
     }
 
+``findPath(T parent,HashMap<T,T> childToParent )`` O(n)
 
+	/**
+	 * Denne metoden lager en path fra en foreldrenode til nodens barn.
+	 * En arrayliste vil holde styr på pathen. Her blir det lagt til
+	 * @param parent
+	 * @param childToParent
+	 * @param <T>
+	 * @return
+	 */
+	private <T> ArrayList<T> findPath(T parent, HashMap<T,T> childToParent){
+		ArrayList<T> path = new ArrayList<>();
+		while (parent != null){ //O(n) * O(1) = O(n)
+			path.add(parent); //O(1)
+			parent = childToParent.get(parent); //O(1)
+		}
+		return path;
+	}
 
-	
 
 
 ``public class BFS {`` O(n)
@@ -217,16 +262,21 @@ For each method of the different strategies give a runtime analysis in Big-O not
       } else {
           leaves.add(root); //O(1) //legger til i lista som skal returneres
       }
+      
 
+      //O(2 * log n * n), men:
+      //Vil aldri få O(n log n) hvis O(n) er stor.
       //Koden går alltid lenger og lenger ned i treet og aldri i samme node mer enn en gang.
-      //Derfor blir kjøretiden på foor-loopen under O(n).
-      for (T rootNode : subTrees){ 
+
+      //Derfor blir kjøretiden på foor-loopen under O(n). 
+
+      for (T rootNode : subTrees){ //O(2) siden den ikke kjører gjennom mer enn to ganger = O(1)
           while (g.degree(rootNode) != 1){ //O(log n)Så lenge en man ikke finner en node som bare har en nabo
               int i = 0;
               T newNode = null;
 
-              for (T neighbor : neighbours.get(rootNode)){ //O(n)
-                  if (count.get(neighbor) > i){//leter ett den noden med flest naboer
+              for (T neighbor : neighbours.get(rootNode)){ //O(1/2n) ,mens vi ikke er ved løvet
+                  if (count.get(neighbor) > i){// O(1/2n), leter ett den noden med flest naboer 
                       i = count.get(neighbor);
                       newNode = neighbor;
                   }
@@ -243,30 +293,34 @@ For each method of the different strategies give a runtime analysis in Big-O not
       return new Edge<>(leaf1,leaf2);
   }
 
-  /**
-  * Denne hjelpemetoden teller noder.
-  * @param g
-  * @param node
-  * @param count
-  * @param marked
-  * @param neighbours
-  * @param <T>
-  * @return
-    */
-    public <T> int count(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
-    int counter = 1;
-    marked.add(node); //O(1)
-    ArrayList<T> childrenList = new ArrayList<>();
-    for(T children : g.neighbours(node)){ //O(N)
-    if(!marked.contains(children)){ //O(1)
-    childrenList.add(children); //O(1)
-    counter += count(g, children, count, marked, neighbours);
-    }
-    }
-    neighbours.put(node, childrenList); //O(1)
-    count.put(node, counter); //O(1)
-    return counter;
-    }   
+
+``count(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours )`` O(n)
+
+
+	/**
+	 * Denne hjelpemetoden teller noder.
+	 * @param g
+	 * @param node
+	 * @param count
+	 * @param marked
+	 * @param neighbours
+	 * @param <T>
+	 * @return
+	 */
+	public <T> int count(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
+		int counter = 1;
+		marked.add(node);
+		ArrayList<T> childrenList = new ArrayList<>();
+		for(T children : g.neighbours(node)){ O(n)
+			if(!marked.contains(children)){ O(1)
+				childrenList.add(children); O(1)
+				counter += count(g, children, count, marked, neighbours);
+			}
+		}
+		neighbours.put(node, childrenList); O(1)
+		count.put(node, counter); O(1)
+		return counter;
+	}
 
 
 
