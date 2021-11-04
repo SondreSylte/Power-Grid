@@ -3,13 +3,35 @@
 Briefly describe your implementation of the different methods. What was your idea and how did you execute it? If there were any problems and/or failed implementations please add a description.
 
 ## Task 1 - mst
-*Enter description*
+
+Denne metoden vil bruke Prims algoritme som lager et minimum spanning tree i en vektet graf.
+I et spanning tree er alle noder koblet sammen. Poenget er å finne den korteste veien gjennom treet.
+Lager et set (marked) som holder styr på nodene som allerede er inkludert i mst. Lager en PQ som prioriterer kantene etter størrelse.
+Legger først til en startnode, og alle kantene til denne noden. Legger kantene inn i PQ, da vil PQ sortere de etter størrelse og alltid
+velge den korteste. Legger så til startnoden i marked listen, som da vil si at den er besøkt. 
+
+Vil så lage en loop som fortsetter til det er én mindre kant enn antall noder.
+I loopen vil jeg alltid ta vekk den korteste kanten i pq, og så sjekke om marked listen inneholder de to nodene til denne kanten.
+Om den gjør det, vil jeg adde den i shortest edge. 
 
 ## Task 2 - lca
-*Enter description*
+
+I denne oppgaven er målet å finne ut hvor det er mest sannsynlig at strømbruddet har skjedd. Det vil si at vi vil finne hvilken kant som er borte.
+Bruker BFS - bredde første søk, er en metode for å undersøke en graf. Først undersøker en alle nodene ett steg unna, og så videre nodene som
+er to steg unna. BFS søker fra root og gjennom hele grafen. Dermed finner BFS alle foreldrenodene, og lagrer de i form av et HashMap. 
+
+
+I lca funksjonen vil jeg da finne barna til foreldrenodene ved bruk av BFS. Ved hjelp av en funksjon som jeg kaller findPath som tar inn en foreldrenode
+og barnet til denne node, kan jeg lage en path. Videre kan jeg lage et HashSet med lengden av den ene pathen og finne ut når listene inneholder samme node.
+Da har jeg funnet lowest common  ancestor. Her skjedde det da et strømbrudd.
 
 ## Task 3 - addRedundant
-*Enter description*
+
+Skal i denne oppgaven finne et par med noder der det lønner seg mest å legge til en kant. Det jeg tenker er at det er mest gunstig å legge en kant mellom
+løvene til de to største subtrærne. Derfor vil jeg i koden finne de to største subtrærne og det nederste løvet i hver av disse. Så vil jeg
+lage en edge mellom. For å telle noder bruker jeg en hjelpemetode som heter count. 
+
+I compareSize vil jeg sortere subtrærne til roten. Ved å bruke Collections.max kan jeg forbedre kjøretiden fra O(n) ved bruk av PQ til O(1).
 
 
 # Runtime Analysis
@@ -76,6 +98,8 @@ For each method of the different strategies give a runtime analysis in Big-O not
   * @param <T>
   * @return en node som er felles common ancestor for to gitte noder
     */
+  
+
     @Override
     public <T> T lca(Graph<T> g, T root, T u, T v) {
     new BFS();
@@ -166,80 +190,86 @@ For each method of the different strategies give a runtime analysis in Big-O not
     
 * ``addRedundant(Graph<T> g, T root)``: O(n) + O(log n) = O(n)
 
+  @Override
+  public <T> Edge<T> addRedundant(Graph<T> g, T root) { //O(N) + O(log N) = O(N)
+  HashMap<T,Integer> count = new HashMap<>();
+  HashMap<T,ArrayList<T>> neighbours = new HashMap<>();
+
+      HashSet<T> marked = new HashSet<>();
+      HashSet<T> subTrees = new HashSet<>();
+
+      ArrayList<T> leaves = new ArrayList<>();
+      ArrayList<T> neighboursList = new ArrayList<>();
+
+      count(g, root, count, marked, neighbours); //O(N)
+
+      Comparator<T> compareSize = Comparator.comparingInt(count::get); //O(1)
+
+      for (T n : g.neighbours(root)){ //O(N)
+          neighboursList.add(n); //O(1)
+      }
+      T biggestSubTree = Collections.max(neighboursList,compareSize); //O(1)
+      subTrees.add(biggestSubTree); //O(1)
+      neighboursList.remove(biggestSubTree); //O(1)
+
+      if (g.degree(root) > 1){ //O(logN) //Sjekker om naboen roten bare har en nabo
+          subTrees.add(Collections.max(neighboursList,compareSize)); //Legger til i subtre lista
+      } else {
+          leaves.add(root); //O(1) //legger til i lista som skal returneres
+      }
+
+      //Koden går alltid lenger og lenger ned i treet og aldri i samme node mer enn en gang.
+      //Derfor blir kjøretiden på foor-loopen under O(n).
+      for (T rootNode : subTrees){ 
+          while (g.degree(rootNode) != 1){ //O(log n)Så lenge en man ikke finner en node som bare har en nabo
+              int i = 0;
+              T newNode = null;
+
+              for (T neighbor : neighbours.get(rootNode)){ //O(n)
+                  if (count.get(neighbor) > i){//leter ett den noden med flest naboer
+                      i = count.get(neighbor);
+                      newNode = neighbor;
+                  }
+              }
+              rootNode = newNode; //rootNode er da noden med flest naboer. 
+                                  // hile løkken leter videre etter neste med flest naboer
+          }
+          leaves.add(rootNode); //O(1)
+      }
+
+      T leaf1 = leaves.remove(leaves.size()-1); //O(1) fjerner siste
+      T leaf2 = leaves.get(leaves.size()-1); //O(1) fjerner siste
+
+      return new Edge<>(leaf1,leaf2);
+  }
+
   /**
+  * Denne hjelpemetoden teller noder.
   * @param g
-  * @param root
+  * @param node
+  * @param count
+  * @param marked
+  * @param neighbours
   * @param <T>
-  * @return en edge mellom to løv som skal connecte de to subtrærne.
+  * @return
     */
-    @Override
-    public <T> Edge<T> addRedundant(Graph<T> g, T root) { 
-    HashMap<T,Integer> count = new HashMap<>();
-    HashMap<T,ArrayList<T>> neighbours = new HashMap<>();
-
-    HashSet<T> marked = new HashSet<>();
-    HashSet<T> subTrees = new HashSet<>(); //inneholder to elementer. Største subtreene til roten
-
-    ArrayList<T> leaves = new ArrayList<>();
-    ArrayList<T> neighbors = new ArrayList<>();
-
-    countDepth(g, root, count, marked, neighbours); //O(n)
-
-    Comparator<T> compareSize = Comparator.comparingInt(count::get); //O(1)
-
-    for (T neighbour : g.neighbours(root)){ //O(n)
-    neighbors.add(neighbour); //O(1)
+    public <T> int count(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
+    int counter = 1;
+    marked.add(node); //O(1)
+    ArrayList<T> childrenList = new ArrayList<>();
+    for(T children : g.neighbours(node)){ //O(N)
+    if(!marked.contains(children)){ //O(1)
+    childrenList.add(children); //O(1)
+    counter += count(g, children, count, marked, neighbours);
     }
-    T biggest = Collections.max(neighbors,compareSize); //O(1)
-    subTrees.add(biggest); //O(1)
-    neighbors.remove(biggest); //O(1)
-
-    if (g.degree(root) > 1){ //O(log n)
-    subTrees.add(Collections.max(neighbors,compareSize));
-    } else {
-    leaves.add(root); //O(1)
     }
+    neighbours.put(node, childrenList); //O(1)
+    count.put(node, counter); //O(1)
+    return counter;
+    }   
 
-    //Koden går alltid lenger og lenger ned i treet og aldri i samme node mer enn en gang.
-    //Derfor blir kjøretiden på foor-loopen under O(n).
-    for (T rootNode : subTrees){
-    while (g.degree(rootNode) != 1){
-    int i = 0;
-    T newNode = null;
 
-    		for (T neighbor : neighbours.get(rootNode)){
-    			if (count.get(neighbor) > i){
-    				i = count.get(neighbor);
-    				newNode = neighbor;
-    			}
-    		}
-    		rootNode = newNode;
-    	}
-    	leaves.add(rootNode); //O(1)
-    }
 
-    T leaf1 = leaves.remove(leaves.size()-1); //O(1)
-    T leaf2 = leaves.get(leaves.size()-1); //O(1)
-
-    return new Edge<>(leaf1,leaf2);
-    }
-
-  //O(n)
-  public <T> int countDepth(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
-  int counter = 1;
-  marked.add(node); //O(1)
-  ArrayList<T> childrenList = new ArrayList<>();
-  for(T children : g.neighbours(node)){ //O(n)
-  if(!marked.contains(children)){ //O(1)
-  childrenList.add(children); //O(1)
-  counter += countDepth(g, children, count, marked, neighbours);
-  }
-  }
-  neighbours.put(node, childrenList); //O(1)
-  count.put(node, counter); //O(1)
-  return counter;
-  }
-   
      
    
 

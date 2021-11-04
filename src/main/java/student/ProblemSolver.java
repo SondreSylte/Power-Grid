@@ -4,17 +4,23 @@ import java.util.*;
 
 import graph.*;
 
-public class ProblemSolver implements IProblem {
+public class ProblemSolver<T> implements IProblem {
+
+
 
 	/**
-	 * Siden dette er et MST, kan vi anta at n > m
+	 * mst metoden kommer i alle steg til å velge den korteste kanten for å komme fra en node til en annen.
+	 * Har en liste som alltid holder de korteste kantene.
+	 * Har en priority queue som prioriterer hvem av kantene til noden som er kortest
+	 * Marked listed "markerer" noder som er funnet
+	 *
 	 * @param g - The graph of possible power connections the power company can build
 	 * @param <T>
 	 * @param <E>
 	 * @return en liste med de korteste kantene å gå.
 	 */
 	@Override
-	public <T, E extends Comparable<E>> ArrayList<Edge<T>> mst(WeightedGraph<T, E> g) { //O(n) + O(m log m) + O(n*m log m) = O(m log m)
+	public <T, E extends Comparable<E>> ArrayList<Edge<T>> mst(WeightedGraph<T, E> g) { //O(n) + O(m log m) + O(n*m log m) = O(n*m log m)
 
 		ArrayList<Edge<T>> shortestEdge = new ArrayList<>(g.numVertices());
 		if (g.numVertices() < 1){
@@ -31,36 +37,36 @@ public class ProblemSolver implements IProblem {
 		marked.add(start); //O(1)
 
 		while (!priEdges.isEmpty() && shortestEdge.size()-1 < g.size()){ //O(n) * O(m log m) = O(n*m log m)
-			Edge<T> e = priEdges.remove(); //O(log m)
-			T v = e.a;
-			T w = e.b;
-			assert marked.contains(v) || marked.contains(w); //O(1)
+			Edge<T> e = priEdges.poll(); //O(log m)
 
-			if (!marked.contains(v)){ //O(1)
-				marked.add(v); //(1)
-				shortestEdge.add(e); //O(1)
-				for (Edge<T> edge: g.adjacentEdges(v)){ //O(m) * O(log m) = O(m log m)
-					if (!marked.contains(edge.other(v))){ //O(1)
-						priEdges.add(edge); //O(log m)
-					}
-				}
-			}
+			if(marked.contains(e.a) && marked.contains(e.b) ) continue; //O(1)
+			shortestEdge.add(e); //O(1)
 
-			if (!marked.contains(w)){
-				marked.add(w);
-				shortestEdge.add(e);
-				for (Edge<T> edge: g.adjacentEdges(w)){
-					if (!marked.contains(edge.other(w))){
-						priEdges.add(edge);
-					}
-				}
-			}
+			findNodeNotInMarked(g, e.a, marked, priEdges); //O(m log m)
+			findNodeNotInMarked(g, e.b, marked, priEdges); //O(m log m)
 		}
-		System.out.println(shortestEdge);
 		return shortestEdge;
 	}
 
-
+	/**
+	 * Marked vil holde styr på hvilken av nodene som er besøkt og ikke. Denne metoden vil sjekke om noden er
+	 * besøkt. Om den ikke er det, kan den legge til noden sine kanter i pq.
+	 * Markerer videre noden som besøkt.
+	 * @param g
+	 * @param node
+	 * @param marked - listen med de markerte nodene.
+	 * @param priEdges - vil addere kantene i denne listen
+	 * @param <E>
+	 * @param <T>
+	 */
+	//O(m log m)
+	private <E extends Comparable<E>,T> void findNodeNotInMarked(WeightedGraph<T, E> g, T node, HashSet<T> marked, PriorityQueue<Edge<T>> priEdges){
+		if (!marked.contains(node)){ //O(1)
+			marked.add(node); //O(1)
+			for (Edge<T> edge: g.adjacentEdges(node)) //O(m)
+					priEdges.add(edge); //O(log m)
+			}
+		}
 
 
 
@@ -73,15 +79,15 @@ public class ProblemSolver implements IProblem {
 	 * @return en node som er felles common ancestor for to gitte noder
 	 */
 	@Override 
-	public <T> T lca(Graph<T> g, T root, T u, T v) {
+	public <T> T lca(Graph<T> g, T root, T u, T v) { //O(n)
 		new BFS();
 
 		HashMap<T,T> childToParent = BFS.parents(g,root); //
-		ArrayList<T> pathToU = findPath(u,childToParent); //O(N)
-		ArrayList<T> pathToV = findPath(v,childToParent); //O(N)
+		ArrayList<T> pathToU = findPath(u,childToParent); //O(n)
+		ArrayList<T> pathToV = findPath(v,childToParent); //O(n)
 
 		HashSet<T> PathUSet = new HashSet<>(pathToU);
-		for (T node : pathToV){ //O(N)
+		for (T node : pathToV){ //O(n)
 			if (PathUSet.contains(node)){ //O(1)
 				return node;
 			}
@@ -90,6 +96,14 @@ public class ProblemSolver implements IProblem {
 		throw new IllegalArgumentException("No lca found");
 	}
 
+	/**
+	 * Denne metoden lager en path fra en foreldrenode til nodens barn.
+	 * En arrayliste vil holde styr på pathen. Her blir det lagt til
+	 * @param parent
+	 * @param childToParent
+	 * @param <T>
+	 * @return
+	 */
 	private <T> ArrayList<T> findPath(T parent, HashMap<T,T> childToParent){
 		ArrayList<T> path = new ArrayList<>();
 		while (parent != null){ //O(N)
@@ -106,35 +120,35 @@ public class ProblemSolver implements IProblem {
 	 * @return en edge mellom to løv som skal connecte de to subtrærne.
 	 */
 	@Override
-	public <T> Edge<T> addRedundant(Graph<T> g, T root) { //O(N) + O(log N) = O(N)
+	public <T> Edge<T> addRedundant(Graph<T> g, T root) {
 		HashMap<T,Integer> count = new HashMap<>();
 		HashMap<T,ArrayList<T>> neighbours = new HashMap<>();
 
 		HashSet<T> marked = new HashSet<>();
-		HashSet<T> subTrees = new HashSet<>(); //inneholder to elementer. Største subtreene til roten
+		HashSet<T> subTrees = new HashSet<>();
 
 		ArrayList<T> leaves = new ArrayList<>();
-		ArrayList<T> neighbors = new ArrayList<>();
+		ArrayList<T> neighboursList = new ArrayList<>();
 
-		countDepth(g, root, count, marked, neighbours); //O(N)
+		count(g, root, count, marked, neighbours);
 
-		Comparator<T> compareSize = Comparator.comparingInt(count::get); //O(1)
+		Comparator<T> compareSize = Comparator.comparingInt(count::get);
 
-		for (T neighbour : g.neighbours(root)){ //O(N)
-			neighbors.add(neighbour); //O(1)
+		for (T n : g.neighbours(root)){
+			neighboursList.add(n);
 		}
-		T biggest = Collections.max(neighbors,compareSize); //O(1)
-		subTrees.add(biggest); //O(1)
-		neighbors.remove(biggest); //O(1)
+		T biggestSubTree = Collections.max(neighboursList,compareSize);
+		subTrees.add(biggestSubTree);
+		neighboursList.remove(biggestSubTree);
 
-		if (g.degree(root) > 1){ //O(logN)
-			subTrees.add(Collections.max(neighbors,compareSize));
+		if (g.degree(root) > 1){
+			subTrees.add(Collections.max(neighboursList,compareSize));
 		} else {
-			leaves.add(root); //O(1)
+			leaves.add(root);
 		}
 
 		//Koden går alltid lenger og lenger ned i treet og aldri i samme node mer enn en gang.
-		//Derfor blir kjøretiden på foor-loopen under O(N).
+		//Derfor blir kjøretiden på foor-loopen under O(n).
 		for (T rootNode : subTrees){
 			while (g.degree(rootNode) != 1){
 				int i = 0;
@@ -147,29 +161,39 @@ public class ProblemSolver implements IProblem {
 					}
 				}
 				rootNode = newNode;
+
 			}
-			leaves.add(rootNode); //O(1)
+			leaves.add(rootNode);
 		}
 
-		T leaf1 = leaves.remove(leaves.size()-1); //O(1)
-		T leaf2 = leaves.get(leaves.size()-1); //O(1)
+		T leaf1 = leaves.remove(leaves.size()-1);
+		T leaf2 = leaves.get(leaves.size()-1);
 
 		return new Edge<>(leaf1,leaf2);
 	}
 
-	//O(N)
-	public <T> int countDepth(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
+	/**
+	 * Denne hjelpemetoden teller noder.
+	 * @param g
+	 * @param node
+	 * @param count
+	 * @param marked
+	 * @param neighbours
+	 * @param <T>
+	 * @return
+	 */
+	public <T> int count(Graph<T> g, T node, HashMap <T, Integer> count, HashSet <T> marked, HashMap <T, ArrayList<T>> neighbours ){
 		int counter = 1;
-		marked.add(node); //O(1)
+		marked.add(node);
 		ArrayList<T> childrenList = new ArrayList<>();
-		for(T children : g.neighbours(node)){ //O(N)
-			if(!marked.contains(children)){ //O(1)
-				childrenList.add(children); //O(1)
-				counter += countDepth(g, children, count, marked, neighbours);
+		for(T children : g.neighbours(node)){
+			if(!marked.contains(children)){
+				childrenList.add(children);
+				counter += count(g, children, count, marked, neighbours);
 			}
 		}
-		neighbours.put(node, childrenList); //O(1)
-		count.put(node, counter); //O(1)
+		neighbours.put(node, childrenList);
+		count.put(node, counter);
 		return counter;
 	}
 }
