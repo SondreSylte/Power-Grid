@@ -82,7 +82,7 @@ public class ProblemSolver<T> implements IProblem {
 	public <T> T lca(Graph<T> g, T root, T u, T v) { //O(n)
 		new BFS();
 
-		HashMap<T,T> childToParent = BFS.parents(g,root); //
+		HashMap<T,T> childToParent = BFS.parents(g,root);
 		ArrayList<T> pathToU = findPath(u,childToParent); //O(n)
 		ArrayList<T> pathToV = findPath(v,childToParent); //O(n)
 

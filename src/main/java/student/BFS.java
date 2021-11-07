@@ -9,16 +9,16 @@ public class BFS {
 
     /**
      * Bfs er bredde-første-søk og starter på rooten før den undersøker alle noder gjennom grafen.
-     * Bfs har i utgangspunktet kjøretid O(n), fordi du bare besøker hver node 1 gang.
-     * Summen av alle degrees i treet er 2n-2, som vil si at det å gå gjennom alle degrees er O(n).
-     * Derfor konkluderer jeg med at kjøretiden til BFS er O(N).
+     * Bfs har i utgangspunktet kjøretid 2*O(m) = O(m), fordi du bare besøker hver node 2 ganger.
+     * Summen av alle degrees i treet er 2n-2, som vil si at det å gå gjennom alle degrees er O(m).
+     * Derfor konkluderer jeg med at kjøretiden til BFS er O(m).
      * @param g
      * @param root
      * @param <V>
      * @return parents
      */
 
-    public static <V> HashMap<V,V> parents(Graph<V> g, V root){ //O(N)
+    public static <V> HashMap<V,V> parents(Graph<V> g, V root){ //O(m)
         HashSet<V> found = new HashSet<V>();
         LinkedList<Edge<V>> toSearch = new LinkedList<>();
         HashMap<V,V> parents = new HashMap<>();
@@ -27,7 +27,7 @@ public class BFS {
 
         update(g, found, toSearch, root);
 
-        while(!toSearch.isEmpty()) { //O(M)
+        while(!toSearch.isEmpty()) { //O(m)
             Edge<V> e = toSearch.removeFirst();
             V foundNode = getFoundNode(e,found);
             V newNode = e.other(foundNode);

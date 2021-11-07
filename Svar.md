@@ -25,6 +25,8 @@ I lca funksjonen vil jeg da finne barna til foreldrenodene ved bruk av BFS. Ved 
 og barnet til denne node, kan jeg lage en path. Videre kan jeg lage et HashSet med lengden av den ene pathen og finne ut når listene inneholder samme node.
 Da har jeg funnet lowest common  ancestor. Her skjedde det da et strømbrudd.
 
+Jeg brukte Martin sin BFS fra forelesning 12.
+
 ## Task 3 - addRedundant
 
 Skal i denne oppgaven finne et par med noder der det lønner seg mest å legge til en kant. Det jeg tenker er at det er mest gunstig å legge en kant mellom
@@ -117,7 +119,7 @@ For each method of the different strategies give a runtime analysis in Big-O not
 
 
 
-* ``lca(Graph<T> g, T root, T u, T v)``: O(n) + O(n) + O(n) + O(n) = O(n)
+* ``lca(Graph<T> g, T root, T u, T v)``: O(m) + O(n) + O(n) + O(n) = O(n)
 
   /**
   * @param g - The tree of power lines built by the power company.
@@ -133,7 +135,7 @@ For each method of the different strategies give a runtime analysis in Big-O not
     public <T> T lca(Graph<T> g, T root, T u, T v) {
     new BFS();
 
-    HashMap<T,T> childToParent = BFS.parents(g,root); //O(n)
+    HashMap<T,T> childToParent = BFS.parents(g,root); //O(m)
     ArrayList<T> pathToU = findPath(u,childToParent); //O(n)
     ArrayList<T> pathToV = findPath(v,childToParent); //O(n)
 
@@ -168,20 +170,21 @@ For each method of the different strategies give a runtime analysis in Big-O not
 
 
 
-``public class BFS {`` O(n)
+``public class BFS {`` O(m)
+
 
     /**
      * Bfs er bredde-første-søk og starter på rooten før den undersøker alle noder gjennom grafen.
-     * Bfs har i utgangspunktet kjøretid O(n), fordi du bare besøker hver node 1 gang.
-     * Summen av alle degrees i treet er 2n-2, som vil si at det å gå gjennom alle degrees er O(n).
-     * Derfor konkluderer jeg med at kjøretiden til BFS er O(n).
+     * Bfs har i utgangspunktet kjøretid 2*O(m) = O(m), fordi du bare besøker hver node 2 ganger.
+     * Summen av alle degrees i treet er 2m-2, som vil si at det å gå gjennom alle degrees er O(m).
+     * Derfor konkluderer jeg med at kjøretiden til BFS er O(m).
      * @param g
      * @param root
      * @param <V>
      * @return parents
      */
 
-    public static <V> HashMap<V,V> parents(Graph<V> g, V root){ //O(n)
+    public static <V> HashMap<V,V> parents(Graph<V> g, V root){ //O(m)
         HashSet<V> found = new HashSet<V>();
         LinkedList<Edge<V>> toSearch = new LinkedList<>();
         HashMap<V,V> parents = new HashMap<>();
